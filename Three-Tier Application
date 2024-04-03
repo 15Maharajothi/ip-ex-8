@@ -1,0 +1,93 @@
+<%@ page import="java.sql.*" %>
+<%@ page import="java.util.*" %>
+<%@ page import="javax.naming.*" %>
+<%@ page import="javax.sql.*" %>
+
+<%
+// Initialize variables
+String customerID = request.getParameter("customerID");
+String customerName = "";
+double currentBalance = 0.0;
+double totalCredits = 0.0;
+double totalDebits = 0.0;
+
+// Database connection parameters
+String dbURL = "jdbc:mysql://localhost:3306/your_database_name";
+String username = "your_username";
+String password = "your_password";
+
+try {
+    // Load the MySQL JDBC driver
+    Class.forName("com.mysql.jdbc.Driver");
+    
+    // Establish a connection to the database
+    Connection conn = DriverManager.getConnection(dbURL, username, password);
+    
+    // Prepare SQL statements
+    String sqlCustomerInfo = "SELECT customer_name FROM transactions WHERE account_no = ?";
+    String sqlTransactions = "SELECT amount, transaction_type FROM transactions WHERE account_no = ?";
+    
+    // Get customer name
+    PreparedStatement stmtCustomerInfo = conn.prepareStatement(sqlCustomerInfo);
+    stmtCustomerInfo.setString(1, customerID);
+    ResultSet rsCustomerInfo = stmtCustomerInfo.executeQuery();
+    
+    if (rsCustomerInfo.next()) {
+        customerName = rsCustomerInfo.getString("customer_name");
+    }
+    
+    // Get transactions and calculate balance
+    PreparedStatement stmtTransactions = conn.prepareStatement(sqlTransactions);
+    stmtTransactions.setString(1, customerID);
+    ResultSet rsTransactions = stmtTransactions.executeQuery();
+    
+    while (rsTransactions.next()) {
+        double amount = rsTransactions.getDouble("amount");
+        String transactionType = rsTransactions.getString("transaction_type");
+        
+        if (transactionType.equalsIgnoreCase("credit")) {
+            totalCredits += amount;
+            currentBalance += amount;
+        } else if (transactionType.equalsIgnoreCase("debit")) {
+            totalDebits += amount;
+            currentBalance -= amount;
+        }
+    }
+    
+    // Close connections
+    rsCustomerInfo.close();
+    rsTransactions.close();
+    stmtCustomerInfo.close();
+    stmtTransactions.close();
+    conn.close();
+    
+} catch (Exception e) {
+    e.printStackTrace();
+}
+%>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Transactions</title>
+</head>
+<body>
+    <h1>Customer Transactions</h1>
+    <table border="1">
+        <tr>
+            <th>Customer ID</th>
+            <th>Customer Name</th>
+            <th>Current Balance</th>
+            <th>Total Credits</th>
+            <th>Total Debits</th>
+        </tr>
+        <tr>
+            <td><%= customerID %></td>
+            <td><%= customerName %></td>
+            <td><%= currentBalance %></td>
+            <td><%= totalCredits %></td>
+            <td><%= totalDebits %></td>
+        </tr>
+    </table>
+</body>
+</html>
